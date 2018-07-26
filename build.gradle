@@ -1,0 +1,71 @@
+buildscript {
+	ext {
+		springBootVersion = '2.0.3.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+group = 'com.server'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 1.8
+
+repositories {
+	mavenCentral()
+}
+
+
+ext {
+	springCloudVersion = 'Finchley.RELEASE'
+}
+
+dependencies {
+	compile('org.springframework.boot:spring-boot-starter-web')
+	compile('org.springframework.cloud:spring-cloud-starter-sleuth')
+	compile('org.springframework.cloud:spring-cloud-starter-zipkin')
+	testCompile('org.springframework.boot:spring-boot-starter-test')
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+}
+
+
+task dockerzipkin(type: Exec) {
+	executable "bash"
+	args "-c", "docker run -d -p 9411:9411 openzipkin/zipkin:1.26"
+	doLast {
+		println "-----> Successfully set up zipkin container - visit http://localhost:9411 in your browser <-----"
+	}
+}
+
+task printJars() {
+	def jars = ['build/libs/zipkin-0.0.1-SNAPSHOT.jar']
+
+	doLast {
+		jars.each { jar ->
+			println "nohup java -jar ${jar} &"
+		}
+	}
+}
+
+
+
+task stopzipkin(type: Exec) {
+	executable "bash"
+	args "-c", "docker rm \$(docker stop \$(docker ps -a -q --filter ancestor=openzipkin/zipkin:1.26 --format='{{.ID}}'))"
+	doLast {
+		println "-----> Successfully stopped and removed all zipkin containers <-----"
+	}
+}
